@@ -105,6 +105,7 @@ struct BrowseView: View {
                 NavigationLink(destination: ExhibitionDetailView(exhibition: exhibition)) {
                     ExhibitionCardView(exhibition: exhibition)
                 }
+                .buttonStyle(PlainButtonStyle())
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 .onAppear {
@@ -204,11 +205,16 @@ struct ExhibitionCardView: View {
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .frame(height: 200)
+                    .clipped()
             } placeholder: {
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
+                    .frame(height: 200)
             }
+            .frame(maxWidth: .infinity)
             .frame(height: 200)
+            .background(Color.gray.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             
             // Exhibition details
@@ -238,12 +244,17 @@ struct ExhibitionCardView: View {
             }
             .padding(.top, 12)
             .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(.systemGray5), lineWidth: 0.5)
         )
         .clipped()
     }

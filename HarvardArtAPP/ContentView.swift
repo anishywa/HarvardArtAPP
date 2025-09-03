@@ -9,9 +9,10 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var favoritesStore = FavoritesStore.shared
+    @State private var selectedTab = 0
     
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 BrowseView()
             }
@@ -19,14 +20,16 @@ struct ContentView: View {
                 Image(systemName: "building.columns")
                 Text("Browse")
             }
+            .tag(0)
             
             NavigationStack {
-                FavoritesView()
+                FavoritesView(selectedTab: $selectedTab)
             }
             .tabItem {
                 Image(systemName: "heart")
                 Text("Favorites")
             }
+            .tag(1)
             
             NavigationStack {
                 SearchView()
@@ -35,6 +38,7 @@ struct ContentView: View {
                 Image(systemName: "magnifyingglass")
                 Text("Search")
             }
+            .tag(2)
         }
         .environmentObject(favoritesStore)
     }

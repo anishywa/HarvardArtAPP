@@ -260,23 +260,41 @@ struct SearchView: View {
         case .artist(let artist):
             ArtistDetailView(artist: artist)
         case .medium(let classification):
-            // For now, show a simple text view for mediums
-            // You could create a MediumDetailView if needed
+            // Simple detail view for mediums/classifications
             VStack(spacing: 20) {
-                Text(classification.name ?? "Unknown Medium")
-                    .font(.title)
-                    .fontWeight(.bold)
-                
-                if let description = classification.name {
-                    Text("Medium: \(description)")
-                        .font(.body)
+                VStack(spacing: 12) {
+                    Text(classification.displayName)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("Classification")
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                        .tracking(1)
+                }
+                
+                if let objectCount = classification.objectcount, objectCount > 0 {
+                    VStack(spacing: 8) {
+                        Text("Available Artworks")
+                            .font(.headline)
+                        
+                        Text(classification.displayCount)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.secondarySystemBackground))
+                    )
                 }
                 
                 Spacer()
             }
             .padding()
-            .navigationTitle("Medium Details")
+            .navigationTitle("Medium")
             .navigationBarTitleDisplayMode(.large)
         }
     }

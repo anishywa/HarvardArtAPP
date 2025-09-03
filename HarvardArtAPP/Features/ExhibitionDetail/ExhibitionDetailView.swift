@@ -44,6 +44,9 @@ struct ExhibitionDetailView: View {
                     } else if filteredArtworks.isEmpty && !searchText.isEmpty {
                         searchEmptyStateView
                             .frame(minHeight: 400)
+                    } else if filteredArtworks.isEmpty && searchText.isEmpty && !viewModel.artworks.isEmpty {
+                        noPicturesStateView
+                            .frame(minHeight: 400)
                     } else {
                         artworksGridContent
                     }
@@ -135,6 +138,31 @@ struct ExhibitionDetailView: View {
                 .multilineTextAlignment(.center)
             
             Button("Try Again") {
+                Task {
+                    await viewModel.refreshArtworks()
+                }
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding()
+    }
+    
+    private var noPicturesStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            
+            Text("No pictures of the pieces found")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Text("This exhibition has artworks, but none have available images to display.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Button("Refresh") {
                 Task {
                     await viewModel.refreshArtworks()
                 }
@@ -261,13 +289,18 @@ struct ExhibitionDetailView: View {
     }
     
     private func updateFilteredArtworks() {
+        // First filter to only include artworks with valid image URLs
+        let artworksWithImages = viewModel.artworks.filter { artwork in
+            artwork.imageURL != nil && artwork.primaryimageurl != nil && !artwork.primaryimageurl!.isEmpty
+        }
+        
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            filteredArtworks = viewModel.artworks
+            filteredArtworks = artworksWithImages
             return
         }
         
         let searchQuery = searchText.lowercased()
-        let filtered = viewModel.artworks.filter { artwork in
+        let filtered = artworksWithImages.filter { artwork in
             artwork.displayTitle.lowercased().contains(searchQuery) ||
             artwork.displayArtist.lowercased().contains(searchQuery) ||
             artwork.displayDescription.lowercased().contains(searchQuery) ||
@@ -294,7 +327,11 @@ struct ArtworkCardView: View {
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(Color.gray.opacity(0.1))
+                        .overlay(
+                            ProgressView()
+                                .scaleEffect(0.5)
+                        )
                 }
                 .frame(height: 100) // Further reduced height
                 .clipShape(RoundedRectangle(cornerRadius: 8))

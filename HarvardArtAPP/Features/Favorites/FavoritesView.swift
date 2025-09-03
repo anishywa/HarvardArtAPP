@@ -10,6 +10,7 @@ import SwiftUI
 struct FavoritesView: View {
     @EnvironmentObject private var favoritesStore: FavoritesStore
     @State private var searchText = ""
+    @Binding var selectedTab: Int
     
     var body: some View {
         VStack(spacing: 0) {
@@ -137,9 +138,8 @@ struct FavoritesView: View {
                 .multilineTextAlignment(.center)
             
             Button(action: {
-                // In a full implementation, this would switch to the Browse tab
-                // This matches the design shown in the image
-                print("Browse art button tapped")
+                // Switch to the Browse tab (tag 0)
+                selectedTab = 0
             }) {
                 Text("Browse art")
                     .font(.system(size: 17, weight: .medium))
@@ -269,6 +269,6 @@ struct FavoriteArtworkRowView: View {
 }
 
 #Preview {
-    FavoritesView()
+    FavoritesView(selectedTab: .constant(1))
         .environmentObject(FavoritesStore.shared)
 }

@@ -8,14 +8,35 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var favoritesStore = FavoritesStore.shared
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            NavigationStack {
+                BrowseView()
+            }
+            .tabItem {
+                Image(systemName: "building.columns")
+                Text("Browse")
+            }
+            
+            NavigationStack {
+                FavoritesView()
+            }
+            .tabItem {
+                Image(systemName: "heart")
+                Text("Favorites")
+            }
+            
+            NavigationStack {
+                SearchView()
+            }
+            .tabItem {
+                Image(systemName: "magnifyingglass")
+                Text("Search")
+            }
         }
-        .padding()
+        .environmentObject(favoritesStore)
     }
 }
 

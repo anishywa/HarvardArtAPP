@@ -28,12 +28,14 @@ class APIClient: ObservableObject {
     
     // MARK: - Exhibitions
     
+    /// Fetches exhibitions using search relevance to prioritize well-documented content
     func fetchExhibitions(page: Int = 1, size: Int = 20) async throws -> APIResponse<Exhibition> {
         let endpoint = "/exhibition"
         let queryItems = [
             URLQueryItem(name: "apikey", value: apiKey),
             URLQueryItem(name: "size", value: String(size)),
-            URLQueryItem(name: "page", value: String(page))
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "q", value: "Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major")
         ]
         
         return try await performRequest(endpoint: endpoint, queryItems: queryItems)
@@ -41,6 +43,7 @@ class APIClient: ObservableObject {
     
     // MARK: - Artworks
     
+    /// Fetches artworks in an exhibition with images
     func fetchArtworksInExhibition(exhibitionId: Int, page: Int = 1, size: Int = 20) async throws -> APIResponse<Artwork> {
         let endpoint = "/object"
         let queryItems = [
@@ -56,9 +59,66 @@ class APIClient: ObservableObject {
     
     func searchArtworks(query: String, page: Int = 1, size: Int = 20) async throws -> APIResponse<Artwork> {
         let endpoint = "/object"
+        // Enhance search relevance by combining user query with quality indicators
+        let enhancedQuery = "\(query) AND (Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major)"
         let queryItems = [
             URLQueryItem(name: "apikey", value: apiKey),
-            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "q", value: enhancedQuery),
+            URLQueryItem(name: "size", value: String(size)),
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "hasimage", value: "1")
+        ]
+        
+        return try await performRequest(endpoint: endpoint, queryItems: queryItems)
+    }
+    
+    func searchExhibitions(query: String, page: Int = 1, size: Int = 20) async throws -> APIResponse<Exhibition> {
+        let endpoint = "/exhibition"
+        // Enhance search relevance by combining user query with quality indicators
+        let enhancedQuery = "\(query) AND (Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major)"
+        let queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey),
+            URLQueryItem(name: "q", value: enhancedQuery),
+            URLQueryItem(name: "size", value: String(size)),
+            URLQueryItem(name: "page", value: String(page))
+        ]
+        
+        return try await performRequest(endpoint: endpoint, queryItems: queryItems)
+    }
+    
+    func searchPeople(query: String, page: Int = 1, size: Int = 20) async throws -> APIResponse<Person> {
+        let endpoint = "/person"
+        // Enhance search relevance by combining user query with quality indicators
+        let enhancedQuery = "\(query) AND (Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major)"
+        let queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey),
+            URLQueryItem(name: "q", value: enhancedQuery),
+            URLQueryItem(name: "size", value: String(size)),
+            URLQueryItem(name: "page", value: String(page))
+        ]
+        
+        return try await performRequest(endpoint: endpoint, queryItems: queryItems)
+    }
+    
+    func searchClassifications(query: String, page: Int = 1, size: Int = 20) async throws -> APIResponse<Classification> {
+        let endpoint = "/classification"
+        // Enhance search relevance by combining user query with quality indicators
+        let enhancedQuery = "\(query) AND (Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major)"
+        let queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey),
+            URLQueryItem(name: "q", value: enhancedQuery),
+            URLQueryItem(name: "size", value: String(size)),
+            URLQueryItem(name: "page", value: String(page))
+        ]
+        
+        return try await performRequest(endpoint: endpoint, queryItems: queryItems)
+    }
+    
+    func fetchArtworksByArtist(artistId: Int, page: Int = 1, size: Int = 20) async throws -> APIResponse<Artwork> {
+        let endpoint = "/object"
+        let queryItems = [
+            URLQueryItem(name: "apikey", value: apiKey),
+            URLQueryItem(name: "person", value: String(artistId)),
             URLQueryItem(name: "size", value: String(size)),
             URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "hasimage", value: "1")

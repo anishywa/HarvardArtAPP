@@ -13,14 +13,27 @@ struct FavoritesView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar for favorites (only show if there are favorites)
-            if !favoritesStore.favoriteArtworks.isEmpty {
-                favoritesSearchBar
-            }
+            // Always show search bar at top
+            favoritesSearchBar
             
             ZStack {
                 if favoritesStore.favoriteArtworks.isEmpty {
-                    emptyStateView
+                    if !searchText.isEmpty {
+                        // Show search message when trying to search with no favorites
+                        VStack(spacing: 16) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 32))
+                                .foregroundColor(.secondary)
+                            Text("No favorites to search")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Add some artworks to favorites first")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    } else {
+                        emptyStateView
+                    }
                 } else {
                     favoritesList
                 }
@@ -60,32 +73,53 @@ struct FavoritesView: View {
                         let artworks = filteredGroupedFavorites[exhibitionTitle] ?? []
                         
                         ForEach(artworks) { artwork in
-                            FavoriteArtworkRowView(artwork: artwork) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                    // Create a dummy exhibition for unfavoriting
-                                    let exhibition = Exhibition(
-                                        id: artwork.exhibitionId,
-                                        title: artwork.exhibitionTitle,
-                                        description: nil,
-                                        primaryimageurl: nil,
-                                        begindate: nil,
-                                        enddate: nil
-                                    )
-                                    
-                                    // Convert FavoriteArtwork back to Artwork for unfavoriting
-                                    let artworkModel = Artwork(
-                                        id: artwork.id,
-                                        title: artwork.title,
-                                        dated: artwork.dated,
-                                        description: artwork.description,
-                                        labeltext: nil,
-                                        primaryimageurl: artwork.imageURL,
-                                        people: nil
-                                    )
-                                    
-                                    favoritesStore.toggleFavorite(artwork: artworkModel, fromExhibition: exhibition)
+                            NavigationLink(destination: ArtworkDetailView(
+                                artwork: Artwork(
+                                    id: artwork.id,
+                                    title: artwork.title,
+                                    dated: artwork.dated,
+                                    description: artwork.description,
+                                    labeltext: nil,
+                                    primaryimageurl: artwork.imageURL,
+                                    people: nil
+                                ),
+                                exhibition: Exhibition(
+                                    id: artwork.exhibitionId,
+                                    title: artwork.exhibitionTitle,
+                                    description: nil,
+                                    primaryimageurl: nil,
+                                    begindate: nil,
+                                    enddate: nil
+                                )
+                            )) {
+                                FavoriteArtworkRowView(artwork: artwork) {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                        // Create a dummy exhibition for unfavoriting
+                                        let exhibition = Exhibition(
+                                            id: artwork.exhibitionId,
+                                            title: artwork.exhibitionTitle,
+                                            description: nil,
+                                            primaryimageurl: nil,
+                                            begindate: nil,
+                                            enddate: nil
+                                        )
+                                        
+                                        // Convert FavoriteArtwork back to Artwork for unfavoriting
+                                        let artworkModel = Artwork(
+                                            id: artwork.id,
+                                            title: artwork.title,
+                                            dated: artwork.dated,
+                                            description: artwork.description,
+                                            labeltext: nil,
+                                            primaryimageurl: artwork.imageURL,
+                                            people: nil
+                                        )
+                                        
+                                        favoritesStore.toggleFavorite(artwork: artworkModel, fromExhibition: exhibition)
+                                    }
                                 }
                             }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
@@ -94,20 +128,30 @@ struct FavoritesView: View {
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "heart")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
+        VStack(spacing: 20) {
+            Spacer()
             
-            Text("You have no favorited artworks")
-                .font(.headline)
-                .foregroundColor(.secondary)
-            
-            Text("Tap the heart icon on artworks to add them to your favorites")
-                .font(.subheadline)
+            Text("You have no favorited artworks.")
+                .font(.system(size: 17))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+            
+            Button(action: {
+                // In a full implementation, this would switch to the Browse tab
+                // This matches the design shown in the image
+                print("Browse art button tapped")
+            }) {
+                Text("Browse art")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.blue)
+                    .cornerRadius(10)
+            }
+            .padding(.horizontal, 40)
+            
+            Spacer()
         }
     }
     
@@ -117,7 +161,7 @@ struct FavoritesView: View {
                 .foregroundColor(.secondary)
                 .padding(.leading, 12)
             
-            TextField("Search your favorites", text: $searchText)
+            TextField("Search for an artwork", text: $searchText)
                 .textFieldStyle(PlainTextFieldStyle())
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)

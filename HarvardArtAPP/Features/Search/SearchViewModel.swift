@@ -9,18 +9,29 @@ import Foundation
 
 @MainActor
 class SearchViewModel: ObservableObject {
-    @Published var artworks: [Artwork] = []
+    @Published var searchResults: [SearchResult] = []
     @Published var isLoading = false
     @Published var isLoadingMore = false
     @Published var errorMessage: String?
     
     private let apiClient = APIClient.shared
     private var currentQuery = ""
+    private var currentCategory: SearchCategory = .artwork
     private var currentPage = 1
     private var hasMorePages = true
     private var searchTask: Task<Void, Never>?
     
-    func scheduleSearch(query: String) {
+    // Keep artworks for backward compatibility with favorites functionality
+    var artworks: [Artwork] {
+        searchResults.compactMap { result in
+            if case .artwork(let artwork) = result {
+                return artwork
+            }
+            return nil
+        }
+    }
+    
+    func scheduleSearch(query: String, category: SearchCategory) {
         // Cancel previous search
         searchTask?.cancel()
         
@@ -37,7 +48,7 @@ class SearchViewModel: ObservableObject {
                 try await Task.sleep(nanoseconds: 300_000_000) // 300ms
                 
                 if !Task.isCancelled {
-                    await search(query: trimmedQuery)
+                    await search(query: trimmedQuery, category: category)
                 }
             } catch {
                 // Task was cancelled, which is expected behavior - don't treat as error
@@ -46,16 +57,17 @@ class SearchViewModel: ObservableObject {
         }
     }
     
-    func search(query: String) async {
+    func search(query: String, category: SearchCategory) async {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else { return }
         
-        // If it's a new query, reset everything
-        if trimmedQuery != currentQuery {
-            artworks = []
+        // If it's a new query or category, reset everything
+        if trimmedQuery != currentQuery || category != currentCategory {
+            searchResults = []
             currentPage = 1
             hasMorePages = true
             currentQuery = trimmedQuery
+            currentCategory = category
         }
         
         guard !isLoading else { return }
@@ -64,10 +76,10 @@ class SearchViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            let response = try await apiClient.searchArtworks(query: trimmedQuery, page: 1)
-            artworks = response.records
+            let results = try await performSearch(query: trimmedQuery, category: category, page: 1)
+            searchResults = results
             currentPage = 1
-            hasMorePages = response.info.hasNextPage
+            hasMorePages = true // We'll implement pagination later if needed
         } catch {
             // Don't show error for cancelled tasks
             if !Task.isCancelled {
@@ -78,6 +90,48 @@ class SearchViewModel: ObservableObject {
         isLoading = false
     }
     
+    private func performSearch(query: String, category: SearchCategory, page: Int) async throws -> [SearchResult] {
+        switch category {
+        case .artwork:
+            let response: APIResponse<Artwork> = try await apiClient.searchArtworks(query: query, page: page)
+            return response.records.map { SearchResult.artwork($0) }
+            
+        case .exhibitions:
+            let response: APIResponse<Exhibition> = try await apiClient.searchExhibitions(query: query, page: page)
+            return response.records.map { SearchResult.exhibition($0) }
+            
+        case .artists:
+            let response: APIResponse<Person> = try await apiClient.searchPeople(query: query, page: page)
+            return response.records.map { SearchResult.artist($0) }
+            
+        case .mediums:
+            let response: APIResponse<Classification> = try await apiClient.searchClassifications(query: query, page: page)
+            return response.records.map { SearchResult.medium($0) }
+            
+        case .all:
+            // Perform general search across all categories
+            return try await performGeneralSearch(query: query, page: page)
+        }
+    }
+    
+    private func performGeneralSearch(query: String, page: Int) async throws -> [SearchResult] {
+        // Search across multiple categories and combine results
+        async let artworksTask = apiClient.searchArtworks(query: query, page: page)
+        async let exhibitionsTask = apiClient.searchExhibitions(query: query, page: page)
+        async let artistsTask = apiClient.searchPeople(query: query, page: page)
+        
+        let (artworksResponse, exhibitionsResponse, artistsResponse) = try await (artworksTask, exhibitionsTask, artistsTask)
+        
+        var allResults: [SearchResult] = []
+        
+        // Add results from each category (limit each to maintain performance)
+        allResults.append(contentsOf: artworksResponse.records.prefix(5).map { SearchResult.artwork($0) })
+        allResults.append(contentsOf: exhibitionsResponse.records.prefix(5).map { SearchResult.exhibition($0) })
+        allResults.append(contentsOf: artistsResponse.records.prefix(5).map { SearchResult.artist($0) })
+        
+        return allResults
+    }
+    
     func loadMoreResults() async {
         guard !isLoadingMore && hasMorePages && !currentQuery.isEmpty else { return }
         
@@ -85,10 +139,10 @@ class SearchViewModel: ObservableObject {
         
         do {
             let nextPage = currentPage + 1
-            let response = try await apiClient.searchArtworks(query: currentQuery, page: nextPage)
-            artworks.append(contentsOf: response.records)
+            let moreResults = try await performSearch(query: currentQuery, category: currentCategory, page: nextPage)
+            searchResults.append(contentsOf: moreResults)
             currentPage = nextPage
-            hasMorePages = response.info.hasNextPage
+            hasMorePages = true // We'll implement proper pagination later if needed
         } catch {
             // Don't show error for cancelled tasks
             if !Task.isCancelled {
@@ -101,7 +155,7 @@ class SearchViewModel: ObservableObject {
     
     func clearResults() {
         searchTask?.cancel()
-        artworks = []
+        searchResults = []
         currentQuery = ""
         currentPage = 1
         hasMorePages = true

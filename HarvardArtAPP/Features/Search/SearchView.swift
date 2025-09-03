@@ -7,10 +7,38 @@
 
 import SwiftUI
 
+enum SearchCategory: String, CaseIterable {
+    case exhibitions = "Exhibitions"
+    case artwork = "Artwork"
+    case artists = "Artists"
+    case mediums = "Mediums"
+    case all = "All" // Added for general search
+}
+
 struct SearchView: View {
     @StateObject private var viewModel = SearchViewModel()
     @EnvironmentObject private var favoritesStore: FavoritesStore
     @State private var searchText = ""
+    @State private var selectedCategory: SearchCategory? = nil
+    
+    private var placeholderText: String {
+        if let category = selectedCategory {
+            switch category {
+            case .artwork:
+                return "Search for an artwork"
+            case .exhibitions:
+                return "Search for exhibitions"
+            case .artists:
+                return "Search for artists"
+            case .mediums:
+                return "Search for mediums"
+            case .all:
+                return "Search everything"
+            }
+        } else {
+            return "Search everything"
+        }
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -29,15 +57,15 @@ struct SearchView: View {
                 ZStack {
                     if searchText.isEmpty {
                         emptySearchState
-                    } else if viewModel.artworks.isEmpty && !viewModel.isLoading {
-                        noResultsState
-                    } else {
-                        searchResults
-                    }
+                                    } else if viewModel.searchResults.isEmpty && !viewModel.isLoading {
+                    noResultsState
+                } else {
+                    searchResults
+                }
                     
-                    if viewModel.isLoading && viewModel.artworks.isEmpty {
-                        ProgressView("Searching...")
-                    }
+                                    if viewModel.isLoading && viewModel.searchResults.isEmpty {
+                    ProgressView("Searching...")
+                }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -62,13 +90,13 @@ struct SearchView: View {
                 .foregroundColor(.secondary)
                 .padding(.leading, 12)
             
-            TextField("Search for an artwork", text: $searchText)
+            TextField(placeholderText, text: $searchText)
                 .textFieldStyle(PlainTextFieldStyle())
                 .onSubmit {
                     performSearch()
                 }
                 .onChange(of: searchText) { _, newValue in
-                    viewModel.scheduleSearch(query: newValue)
+                    viewModel.scheduleSearch(query: newValue, category: selectedCategory ?? .all)
                 }
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
@@ -99,10 +127,25 @@ struct SearchView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                FilterChip(title: "Exhibitions", isSelected: false)
-                FilterChip(title: "Artwork", isSelected: false)
-                FilterChip(title: "Artists", isSelected: false)
-                FilterChip(title: "Mediums", isSelected: false)
+                ForEach(SearchCategory.allCases.filter { $0 != .all }, id: \.self) { category in
+                    FilterChip(
+                        title: category.rawValue,
+                        isSelected: selectedCategory == category
+                    ) {
+                        // Toggle category selection - allow deselection
+                        if selectedCategory == category {
+                            selectedCategory = nil // Deselect current category
+                        } else {
+                            selectedCategory = category // Select new category
+                        }
+                        
+                        if !searchText.isEmpty {
+                            Task {
+                                await viewModel.search(query: searchText, category: selectedCategory ?? .all)
+                            }
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 16)
         }
@@ -111,48 +154,63 @@ struct SearchView: View {
     
     private var searchResults: some View {
         ScrollView(.vertical, showsIndicators: true) {
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 20) {
-                ForEach(viewModel.artworks) { artwork in
-                    SearchResultCardView(
-                        artwork: artwork,
-                        isFavorite: favoritesStore.isFavorite(artworkId: artwork.id)
-                    ) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                            // For search results, we don't have a specific exhibition context
-                            // So we'll create a generic one or use the first available exhibition
-                            let genericExhibition = Exhibition(
-                                id: 0,
-                                title: "Search Results",
-                                description: "Artwork found through search",
-                                primaryimageurl: nil,
-                                begindate: nil,
-                                enddate: nil
-                            )
-                            favoritesStore.toggleFavorite(artwork: artwork, fromExhibition: genericExhibition)
-                        }
-                    }
-                    .onAppear {
-                        if artwork.id == viewModel.artworks.last?.id {
-                            Task {
-                                await viewModel.loadMoreResults()
+            if selectedCategory == .artwork {
+                // Grid layout for artworks only
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ], spacing: 20) {
+                    ForEach(viewModel.artworks) { artwork in
+                        NavigationLink(destination: ArtworkDetailView(artwork: artwork, exhibition: Exhibition(
+                            id: 0,
+                            title: "Search Results",
+                            description: "Artwork found through search",
+                            primaryimageurl: nil,
+                            begindate: nil,
+                            enddate: nil
+                        ))) {
+                            SearchResultCardView(
+                                artwork: artwork,
+                                isFavorite: favoritesStore.isFavorite(artworkId: artwork.id)
+                            ) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    let genericExhibition = Exhibition(
+                                        id: 0,
+                                        title: "Search Results",
+                                        description: "Artwork found through search",
+                                        primaryimageurl: nil,
+                                        begindate: nil,
+                                        enddate: nil
+                                    )
+                                    favoritesStore.toggleFavorite(artwork: artwork, fromExhibition: genericExhibition)
+                                }
                             }
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
-                
-                if viewModel.isLoadingMore {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                .padding()
+            } else {
+                // List layout for other categories or general search (when no category selected)
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.searchResults) { result in
+                        NavigationLink(destination: destinationView(for: result)) {
+                            UniversalSearchResultView(result: result)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .padding()
                 }
+                .padding()
             }
-            .padding()
+            
+            if viewModel.isLoadingMore {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+                .padding()
+            }
         }
     }
     
@@ -181,7 +239,45 @@ struct SearchView: View {
     private func performSearch() {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         Task {
-            await viewModel.search(query: searchText)
+            await viewModel.search(query: searchText, category: selectedCategory ?? .all)
+        }
+    }
+    
+    @ViewBuilder
+    private func destinationView(for result: SearchResult) -> some View {
+        switch result {
+        case .artwork(let artwork):
+            ArtworkDetailView(artwork: artwork, exhibition: Exhibition(
+                id: 0,
+                title: "Search Results",
+                description: "Artwork found through search",
+                primaryimageurl: nil,
+                begindate: nil,
+                enddate: nil
+            ))
+        case .exhibition(let exhibition):
+            ExhibitionDetailView(exhibition: exhibition)
+        case .artist(let artist):
+            ArtistDetailView(artist: artist)
+        case .medium(let classification):
+            // For now, show a simple text view for mediums
+            // You could create a MediumDetailView if needed
+            VStack(spacing: 20) {
+                Text(classification.name ?? "Unknown Medium")
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                if let description = classification.name {
+                    Text("Medium: \(description)")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Medium Details")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
 }
@@ -259,21 +355,101 @@ struct SearchResultCardView: View {
 struct FilterChip: View {
     let title: String
     let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        Text(title)
-            .font(.system(size: 14, weight: .medium))
-            .foregroundColor(isSelected ? .white : .primary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(isSelected ? Color.blue : Color(.systemGray6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 1)
-            )
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(isSelected ? Color.blue : Color(.systemGray6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 1)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct UniversalSearchResultView: View {
+    let result: SearchResult
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Image or placeholder
+            if let imageURL = result.imageURL {
+                AsyncImage(url: imageURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                // Icon based on result type
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 60, height: 60)
+                    
+                    Image(systemName: iconForResult(result))
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(result.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                
+                if !result.subtitle.isEmpty {
+                    Text(result.subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                if !result.description.isEmpty {
+                    Text(result.description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        )
+    }
+    
+    private func iconForResult(_ result: SearchResult) -> String {
+        switch result {
+        case .artwork:
+            return "photo"
+        case .exhibition:
+            return "building.columns"
+        case .artist:
+            return "person"
+        case .medium:
+            return "paintbrush"
+        }
     }
 }
 

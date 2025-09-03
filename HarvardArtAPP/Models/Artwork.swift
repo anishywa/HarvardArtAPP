@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Artwork: Codable, Identifiable {
+struct Artwork: Codable, Identifiable, Equatable {
     let id: Int
     let title: String?
     let dated: String?
@@ -27,7 +27,7 @@ struct Artwork: Codable, Identifiable {
     
     var displayArtist: String {
         if let people = people, !people.isEmpty {
-            let names = people.compactMap { $0.name }.filter { !$0.isEmpty }
+            let names = people.compactMap { $0.effectiveName }.filter { !$0.isEmpty }
             return names.isEmpty ? "Unknown Artist" : names.joined(separator: ", ")
         }
         return "Unknown Artist"

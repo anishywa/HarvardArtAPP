@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Exhibition: Codable, Identifiable {
+struct Exhibition: Codable, Identifiable, Equatable {
     let id: Int
     let title: String?
     let description: String?

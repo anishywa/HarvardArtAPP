@@ -10,15 +10,19 @@ import SwiftUI
 struct BrowseView: View {
     @StateObject private var viewModel = BrowseViewModel()
     @State private var searchText = ""
+    @State private var filteredExhibitions: [Exhibition] = []
     
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar at the top
+            // Search bar at the top - fixed position
             searchBar
             
+            // Content area - takes all remaining space
             ZStack {
                 if viewModel.exhibitions.isEmpty && !viewModel.isLoading {
                     emptyStateView
+                } else if filteredExhibitions.isEmpty && !searchText.isEmpty {
+                    searchEmptyStateView
                 } else {
                     exhibitionsList
                 }
@@ -27,6 +31,7 @@ struct BrowseView: View {
                     ProgressView("Loading exhibitions...")
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle("Browse")
         .navigationBarTitleDisplayMode(.large)
@@ -35,6 +40,12 @@ struct BrowseView: View {
         }
         .task {
             await viewModel.loadExhibitions()
+        }
+        .onChange(of: viewModel.exhibitions) { _, _ in
+            updateFilteredExhibitions()
+        }
+        .onAppear {
+            updateFilteredExhibitions()
         }
         .alert("Error", isPresented: Binding<Bool>(
             get: { viewModel.errorMessage != nil },
@@ -49,29 +60,48 @@ struct BrowseView: View {
     }
     
     private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-                .padding(.leading, 12)
-            
-            TextField("Search for an exhibition", text: $searchText)
-                .textFieldStyle(PlainTextFieldStyle())
-                .disabled(true) // For now, just visual - search functionality in Search tab
-            
-            Spacer()
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 12)
+                
+                TextField("Search for an exhibition", text: $searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .onChange(of: searchText) { _, newValue in
+                        print("Search text changed to: '\(newValue)'")
+                        updateFilteredExhibitions()
+                    }
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.trailing, 12)
+                } else {
+                    Spacer()
+                        .frame(width: 12)
+                }
+            }
+            .frame(height: 36)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemGray6))
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .frame(height: 36)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.systemGray6))
-        )
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
+        .background(Color(.systemBackground))
     }
     
     private var exhibitionsList: some View {
         List {
-            ForEach(viewModel.exhibitions) { exhibition in
+            ForEach(filteredExhibitions) { exhibition in
                 NavigationLink(destination: ExhibitionDetailView(exhibition: exhibition)) {
                     ExhibitionCardView(exhibition: exhibition)
                 }
@@ -117,6 +147,51 @@ struct BrowseView: View {
             .buttonStyle(.bordered)
         }
     }
+    
+    private var searchEmptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            
+            Text("No exhibitions found")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Text("No exhibitions match your search for \"\(searchText)\"")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            Button("Clear Search") {
+                searchText = ""
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+    
+    private func updateFilteredExhibitions() {
+        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            filteredExhibitions = viewModel.exhibitions
+            print("No search text - showing all \(viewModel.exhibitions.count) exhibitions")
+            return
+        }
+        
+        let searchQuery = searchText.lowercased()
+        let filtered = viewModel.exhibitions.filter { exhibition in
+            exhibition.displayTitle.lowercased().contains(searchQuery) ||
+            exhibition.displayDescription.lowercased().contains(searchQuery) ||
+            exhibition.displayDateRange.lowercased().contains(searchQuery)
+        }
+        
+        // Debug info
+        print("Search query: '\(searchQuery)'")
+        print("Total exhibitions: \(viewModel.exhibitions.count)")
+        print("Filtered exhibitions: \(filtered.count)")
+        
+        filteredExhibitions = filtered
+    }
 }
 
 struct ExhibitionCardView: View {
@@ -138,18 +213,19 @@ struct ExhibitionCardView: View {
             
             // Exhibition details
             VStack(alignment: .leading, spacing: 6) {
-                HStack {
+                HStack(alignment: .top) {
                     Text(exhibition.displayTitle)
                         .font(.system(size: 18, weight: .semibold))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                    
-                    Spacer()
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Text(exhibition.displayDateRange)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
                 
                 Text(exhibition.displayDescription)
@@ -157,15 +233,19 @@ struct ExhibitionCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.top, 12)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 16)
         }
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
         )
+        .clipped()
     }
 }
 

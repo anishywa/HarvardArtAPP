@@ -46,7 +46,7 @@ extension Artwork {
             description: "Vincent van Gogh's masterful depiction of a swirling night sky reflecting on a village below. Painted with characteristic bold brushstrokes and vivid colors.",
             labeltext: nil,
             primaryimageurl: "https://nrs.harvard.edu/urn-3:HUAM:54001_dynmc",
-            people: [Person(name: "Vincent van Gogh", role: "artist", displayname: "Vincent van Gogh")]
+            people: [Person(id: 1, name: "Vincent van Gogh", role: "artist", displayname: "Vincent van Gogh", objectcount: 100, birthdate: "1853", deathdate: "1890", birthplace: "Groot-Zundert, Netherlands")]
         ),
         Artwork(
             id: 2,
@@ -55,7 +55,7 @@ extension Artwork {
             description: "One of van Gogh's many self-portraits, showcasing his distinctive style and emotional intensity.",
             labeltext: nil,
             primaryimageurl: "https://nrs.harvard.edu/urn-3:HUAM:54002_dynmc",
-            people: [Person(name: "Vincent van Gogh", role: "artist", displayname: "Vincent van Gogh")]
+            people: [Person(id: 1, name: "Vincent van Gogh", role: "artist", displayname: "Vincent van Gogh", objectcount: 100, birthdate: "1853", deathdate: "1890", birthplace: "Groot-Zundert, Netherlands")]
         ),
         Artwork(
             id: 3,
@@ -64,7 +64,7 @@ extension Artwork {
             description: "A masterpiece depicting a family of peasants sharing a meal by lamplight, representing van Gogh's commitment to portraying the lives of ordinary people.",
             labeltext: nil,
             primaryimageurl: "https://nrs.harvard.edu/urn-3:HUAM:54003_dynmc",
-            people: [Person(name: "Vincent van Gogh", role: "artist", displayname: "Vincent van Gogh")]
+            people: [Person(id: 1, name: "Vincent van Gogh", role: "artist", displayname: "Vincent van Gogh", objectcount: 100, birthdate: "1853", deathdate: "1890", birthplace: "Groot-Zundert, Netherlands")]
         )
     ]
 }

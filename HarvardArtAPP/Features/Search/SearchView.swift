@@ -17,6 +17,7 @@ enum SearchCategory: String, CaseIterable {
 
 struct SearchView: View {
     @StateObject private var viewModel = SearchViewModel()
+    @StateObject private var searchHistoryStore = SearchHistoryStore.shared
     @EnvironmentObject private var favoritesStore: FavoritesStore
     @State private var searchText = ""
     @State private var selectedCategory: SearchCategory? = nil
@@ -56,16 +57,16 @@ struct SearchView: View {
                 // Content area
                 ZStack {
                     if searchText.isEmpty {
-                        emptySearchState
-                                    } else if viewModel.searchResults.isEmpty && !viewModel.isLoading {
-                    noResultsState
-                } else {
-                    searchResults
-                }
+                        recentSearchesView
+                    } else if viewModel.searchResults.isEmpty && !viewModel.isLoading {
+                        noResultsState
+                    } else {
+                        searchResults
+                    }
                     
-                                    if viewModel.isLoading && viewModel.searchResults.isEmpty {
-                    ProgressView("Searching...")
-                }
+                    if viewModel.isLoading && viewModel.searchResults.isEmpty {
+                        ProgressView("Searching...")
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -187,6 +188,16 @@ struct SearchView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .simultaneousGesture(
+                            TapGesture().onEnded {
+                                // Save the clicked artwork to search history
+                                searchHistoryStore.addClickedResultToHistory(
+                                    result: .artwork(artwork),
+                                    originalQuery: searchText,
+                                    category: selectedCategory ?? .all
+                                )
+                            }
+                        )
                     }
                 }
                 .padding()
@@ -198,6 +209,16 @@ struct SearchView: View {
                             UniversalSearchResultView(result: result)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .simultaneousGesture(
+                            TapGesture().onEnded {
+                                // Save the clicked result to search history
+                                searchHistoryStore.addClickedResultToHistory(
+                                    result: result,
+                                    originalQuery: searchText,
+                                    category: selectedCategory ?? .all
+                                )
+                            }
+                        )
                     }
                 }
                 .padding()
@@ -214,9 +235,78 @@ struct SearchView: View {
         }
     }
     
-    private var emptySearchState: some View {
-        // Just show empty space when no search is active
-        Spacer()
+    private var recentSearchesView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                if !searchHistoryStore.recentSearches.isEmpty {
+                    // Header with clear option
+                    HStack {
+                        Text("Recent")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Button("Clear all") {
+                            searchHistoryStore.clearSearchHistory()
+                        }
+                        .font(.system(size: 16))
+                        .foregroundColor(.blue)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, 16)
+                    
+                    // Recent searches list
+                    LazyVStack(spacing: 0) {
+                        ForEach(searchHistoryStore.recentSearches) { historyItem in
+                            RecentSearchItemView(
+                                historyItem: historyItem,
+                                onTap: {
+                                    // If this is a clicked result, navigation is handled by NavigationLink
+                                    if !historyItem.isClickedResult {
+                                        // Restore the search for regular search queries
+                                        searchText = historyItem.query
+                                        selectedCategory = historyItem.category == .all ? nil : historyItem.category
+                                        performSearch()
+                                    }
+                                },
+                                onDelete: {
+                                    searchHistoryStore.removeSearchFromHistory(id: historyItem.id)
+                                },
+                                destinationView: {
+                                    if historyItem.isClickedResult,
+                                       let preview = historyItem.resultPreview,
+                                       let result = preview.toSearchResult() {
+                                        return AnyView(destinationView(for: result))
+                                    }
+                                    return nil
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    // Empty state when no recent searches
+                    VStack(spacing: 16) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        
+                        Text("No recent searches")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Your recent searches will appear here")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding()
+                }
+            }
+        }
     }
     
     private var noResultsState: some View {
@@ -238,6 +328,7 @@ struct SearchView: View {
     
     private func performSearch() {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
         Task {
             await viewModel.search(query: searchText, category: selectedCategory ?? .all)
         }
@@ -400,7 +491,7 @@ struct UniversalSearchResultView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Image or placeholder
+            // Image or placeholder - larger and more prominent
             if let imageURL = result.imageURL {
                 AsyncImage(url: imageURL) { image in
                     image
@@ -409,52 +500,68 @@ struct UniversalSearchResultView: View {
                 } placeholder: {
                     Rectangle()
                         .fill(Color.gray.opacity(0.3))
+                        .overlay(
+                            Image(systemName: iconForResult(result))
+                                .font(.system(size: 20))
+                                .foregroundColor(.secondary)
+                        )
                 }
-                .frame(width: 60, height: 60)
+                .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
                 // Icon based on result type
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(width: 60, height: 60)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 80, height: 80)
                     
                     Image(systemName: iconForResult(result))
-                        .font(.system(size: 24))
+                        .font(.system(size: 32))
                         .foregroundColor(.secondary)
                 }
             }
             
-            // Content
-            VStack(alignment: .leading, spacing: 4) {
+            // Content - improved typography and spacing
+            VStack(alignment: .leading, spacing: 6) {
+                // Title - main name/title
                 Text(result.title)
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
                 
+                // Type indicator
+                Text(typeLabel(for: result))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+                
+                // Subtitle - artist, date, etc.
                 if !result.subtitle.isEmpty {
                     Text(result.subtitle)
-                        .font(.subheadline)
+                        .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
                 
-                if !result.description.isEmpty {
+                // Description - optional additional info
+                if !result.description.isEmpty && result.description != result.subtitle {
                     Text(result.description)
-                        .font(.caption)
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
-            Spacer()
+            Spacer(minLength: 8)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-        )
+        .background(Color(.systemBackground))
+        .contentShape(Rectangle())
     }
     
     private func iconForResult(_ result: SearchResult) -> String {
@@ -467,6 +574,122 @@ struct UniversalSearchResultView: View {
             return "person"
         case .medium:
             return "paintbrush"
+        }
+    }
+    
+    private func typeLabel(for result: SearchResult) -> String {
+        switch result {
+        case .artwork:
+            return "Artwork"
+        case .exhibition:
+            return "Exhibition"
+        case .artist:
+            return "Artist"
+        case .medium:
+            return "Medium"
+        }
+    }
+}
+
+struct RecentSearchItemView: View {
+    let historyItem: SearchHistoryItem
+    let onTap: () -> Void
+    let onDelete: () -> Void
+    let destinationView: () -> AnyView?
+    
+    var body: some View {
+        Group {
+            if historyItem.isClickedResult, let destination = destinationView() {
+                NavigationLink(destination: destination) {
+                    historyItemContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: onTap) {
+                    historyItemContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+    }
+    
+    private var historyItemContent: some View {
+        HStack(spacing: 12) {
+            // Profile-like circle with search icon or result image
+            ZStack {
+                Circle()
+                    .fill(Color(.systemGray6))
+                    .frame(width: 44, height: 44)
+                
+                if let preview = historyItem.resultPreview,
+                   let imageURLString = preview.imageURL,
+                   let imageURL = URL(string: imageURLString) {
+                    AsyncImage(url: imageURL) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Circle()
+                            .fill(Color(.systemGray5))
+                    }
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+                } else {
+                    Image(systemName: iconForCategory(historyItem.category))
+                        .font(.system(size: 18))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            // Search details
+            VStack(alignment: .leading, spacing: 2) {
+                Text(historyItem.displayTitle)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                HStack {
+                    Text(historyItem.displayCategory)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    
+                    Text("•")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    
+                    Text(historyItem.timeAgo)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Delete button
+            Button(action: onDelete) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+    }
+    
+    private func iconForCategory(_ category: SearchCategory) -> String {
+        switch category {
+        case .artwork:
+            return "photo"
+        case .exhibitions:
+            return "building.columns"
+        case .artists:
+            return "person"
+        case .mediums:
+            return "paintbrush"
+        case .all:
+            return "magnifyingglass"
         }
     }
 }

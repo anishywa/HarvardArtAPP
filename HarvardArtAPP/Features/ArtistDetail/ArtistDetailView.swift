@@ -284,13 +284,13 @@ extension Person {
     NavigationStack {
         ArtistDetailView(artist: Person(
             id: 1,
-            name: "Claude Monet",
+            name: "Pablo Picasso",
             role: "artist",
-            displayname: "Claude Monet",
+            displayname: "Pablo Picasso",
             objectcount: 25,
-            birthdate: "1840",
-            deathdate: "1926",
-            birthplace: "Paris, France"
+            birthdate: "1881",
+            deathdate: "1973",
+            birthplace: "Málaga, Spain"
         ))
     }
     .environmentObject(FavoritesStore.shared)

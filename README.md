@@ -8,29 +8,41 @@ A SwiftUI app for browsing exhibitions and artworks from the Harvard Art Museums
 - **Exhibition Detail**: Grid view of artworks within exhibitions with favorite functionality
 - **Search Tab**: Search artworks by keyword with debounced API calls
 - **Favorites Tab**: View favorited artworks grouped by exhibition
+- **AI-Generated Overviews**: Get historical insights about artworks using Google's Gemini AI
 - **Dark/Light Mode Support**: Fully supports iOS appearance modes
 - **Pagination**: Infinite scroll with loading states for all list views
 
 ## Setup Instructions
 
-### 1. Get API Key
+### 1. Get API Keys
 
+#### Harvard Art Museums API
 1. Visit the [Harvard Art Museums API website](https://github.com/harvardartmuseums/api-docs)
 2. Request an API key by following their documentation
 3. You'll receive an API key via email
 
-### 2. Configure API Key
+#### Google Gemini API (for AI overviews)
+1. Visit [Google AI Studio](https://aistudio.google.com/)
+2. Sign in with your Google account
+3. Go to "Get API key" and create a new API key
+4. Copy the generated API key
 
-1. Locate the `Secrets.plist` file in the project:
-   ```
-   HarvardArtAPP/Support/Secrets.plist
+### 2. Configure API Keys
+
+1. Copy the template file to create your secrets file:
+   ```bash
+   cp HarvardArtAPP/Support/Secrets.plist.template HarvardArtAPP/Support/Secrets.plist
    ```
 
-2. Replace `YOUR_API_KEY_HERE` with your actual API key:
+2. Open `HarvardArtAPP/Support/Secrets.plist` and replace the placeholder values:
    ```xml
    <key>HAM_API_KEY</key>
-   <string>your-actual-api-key-here</string>
+   <string>your-harvard-art-museums-api-key-here</string>
+   <key>GEMINI_API_KEY</key>
+   <string>your-gemini-api-key-here</string>
    ```
+
+**⚠️ Important**: The `Secrets.plist` file is gitignored to protect your API keys. Never commit real API keys to version control.
 
 ### 3. Build and Run
 

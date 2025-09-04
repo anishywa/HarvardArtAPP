@@ -88,9 +88,9 @@ struct ExhibitionDetailView: View {
     
     private var artworksGridContent: some View {
         LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 20),
-            GridItem(.flexible(), spacing: 20)
-        ], spacing: 32) {
+            GridItem(.flexible(), spacing: 16),
+            GridItem(.flexible(), spacing: 16)
+        ], spacing: 24) {
             ForEach(filteredArtworks) { artwork in
                 NavigationLink(destination: ArtworkDetailView(artwork: artwork, exhibition: exhibition)) {
                     ArtworkCardView(
@@ -323,8 +323,8 @@ struct ArtworkCardView: View {
     let onFavoriteToggle: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Image section
+        VStack(alignment: .leading, spacing: 0) {
+            // Image section with consistent height
             ZStack(alignment: .topTrailing) {
                 AsyncImage(url: artwork.imageURL) { image in
                     image
@@ -338,56 +338,59 @@ struct ArtworkCardView: View {
                                 .scaleEffect(0.5)
                         )
                 }
-                .frame(height: 100) // Further reduced height
+                .frame(height: 120)
+                .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 
                 Button(action: onFavoriteToggle) {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 14))
+                        .font(.system(size: 16))
                         .foregroundColor(isFavorite ? .red : .white)
+                        .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(.ultraThinMaterial)
-                                .frame(width: 24, height: 24)
+                                .fill(Color.black.opacity(0.6))
                         )
                 }
-                .padding(4)
+                .padding(8)
             }
             
-            // Text content section with flexible sizing
-            VStack(alignment: .leading, spacing: 2) {
+            // Text content section with consistent height
+            VStack(alignment: .leading, spacing: 4) {
                 Text(artwork.displayTitle)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 
                 Text(artwork.displayArtist)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text(artwork.displayDate)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Text(artwork.displayDate)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                if !artwork.displayDescription.isEmpty {
-                    Text(artwork.displayDescription)
-                        .font(.system(size: 8))
-                        .foregroundColor(.secondary)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, minHeight: 70, maxHeight: 70, alignment: .top)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 0.5)
+                .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(.systemGray5), lineWidth: 0.5)
         )
     }
 }

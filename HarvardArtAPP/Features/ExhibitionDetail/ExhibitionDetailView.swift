@@ -88,9 +88,9 @@ struct ExhibitionDetailView: View {
     
     private var artworksGridContent: some View {
         LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 16),
-            GridItem(.flexible(), spacing: 16)
-        ], spacing: 24) {
+            GridItem(.flexible(minimum: 150, maximum: .infinity), spacing: 8),
+            GridItem(.flexible(minimum: 150, maximum: .infinity), spacing: 8)
+        ], spacing: 20, pinnedViews: []) {
             ForEach(filteredArtworks) { artwork in
                 NavigationLink(destination: ArtworkDetailView(artwork: artwork, exhibition: exhibition)) {
                     ArtworkCardView(
@@ -123,8 +123,8 @@ struct ExhibitionDetailView: View {
                 .padding()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
     }
     
     private var emptyStateView: some View {
@@ -338,9 +338,9 @@ struct ArtworkCardView: View {
                                 .scaleEffect(0.5)
                         )
                 }
-                .frame(height: 120)
+                .frame(height: 140)
                 .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 
                 Button(action: onFavoriteToggle) {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
@@ -355,43 +355,46 @@ struct ArtworkCardView: View {
                 .padding(8)
             }
             
-            // Text content section with consistent height
-            VStack(alignment: .leading, spacing: 4) {
+            // Text content section with fixed height and proper containment
+            VStack(alignment: .leading, spacing: 3) {
                 Text(artwork.displayTitle)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .truncationMode(.tail)
                 
                 Text(artwork.displayArtist)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                Text(artwork.displayDate)
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .truncationMode(.tail)
+                
+                Text(artwork.displayDate)
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .truncationMode(.tail)
                 
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 70, maxHeight: 70, alignment: .top)
-            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, minHeight: 60, maxHeight: 60, alignment: .top)
+            .padding(.horizontal, 10)
             .padding(.vertical, 8)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 208, maxHeight: 208)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(Color(.systemGray5), lineWidth: 0.5)
         )
+        .clipped()
     }
 }
 

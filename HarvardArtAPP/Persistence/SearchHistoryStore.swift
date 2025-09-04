@@ -142,6 +142,21 @@ struct SearchHistoryItem: Codable, Identifiable {
     }
     
     var displayCategory: String {
+        // If this is a clicked result, show the actual result type instead of the search category
+        if isClickedResult, let preview = resultPreview {
+            switch preview.type {
+            case .artwork:
+                return "Artwork"
+            case .exhibition:
+                return "Exhibition"
+            case .artist:
+                return "Artist"
+            case .medium:
+                return "Medium"
+            }
+        }
+        
+        // For regular search queries, show the search category
         return category == .all ? "All" : category.rawValue
     }
     

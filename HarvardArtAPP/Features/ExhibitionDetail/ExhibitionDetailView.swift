@@ -87,13 +87,10 @@ struct ExhibitionDetailView: View {
     }
     
     private var artworksGridContent: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible(minimum: 150, maximum: .infinity), spacing: 8),
-            GridItem(.flexible(minimum: 150, maximum: .infinity), spacing: 8)
-        ], spacing: 20, pinnedViews: []) {
+        LazyVStack(spacing: 16) {
             ForEach(filteredArtworks) { artwork in
                 NavigationLink(destination: ArtworkDetailView(artwork: artwork, exhibition: exhibition)) {
-                    ArtworkCardView(
+                    ArtworkRowView(
                         artwork: artwork,
                         exhibition: exhibition,
                         isFavorite: favoritesStore.isFavorite(artworkId: artwork.id)
@@ -316,15 +313,15 @@ struct ExhibitionDetailView: View {
     }
 }
 
-struct ArtworkCardView: View {
+struct ArtworkRowView: View {
     let artwork: Artwork
     let exhibition: Exhibition
     let isFavorite: Bool
     let onFavoriteToggle: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Image section with consistent height
+        HStack(spacing: 16) {
+            // Left side - Artwork image
             ZStack(alignment: .topTrailing) {
                 AsyncImage(url: artwork.imageURL) { image in
                     image
@@ -338,63 +335,71 @@ struct ArtworkCardView: View {
                                 .scaleEffect(0.5)
                         )
                 }
-                .frame(height: 140)
+                .frame(width: 80, height: 80)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 
                 Button(action: onFavoriteToggle) {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                         .foregroundColor(isFavorite ? .red : .white)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 24, height: 24)
                         .background(
                             Circle()
                                 .fill(Color.black.opacity(0.6))
                         )
                 }
-                .padding(8)
+                .padding(6)
             }
             
-            // Text content section with fixed height and proper containment
-            VStack(alignment: .leading, spacing: 3) {
+            // Right side - Artwork details
+            VStack(alignment: .leading, spacing: 4) {
                 Text(artwork.displayTitle)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .truncationMode(.tail)
                 
                 Text(artwork.displayArtist)
-                    .font(.system(size: 10))
+                    .font(.system(size: 14))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .truncationMode(.tail)
                 
                 Text(artwork.displayDate)
-                    .font(.system(size: 9))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .truncationMode(.tail)
                 
+                // Description if available
+                if !artwork.displayDescription.isEmpty {
+                    Text(artwork.displayDescription)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .truncationMode(.tail)
+                }
+                
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 60, maxHeight: 60, alignment: .top)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, minHeight: 208, maxHeight: 208)
+        .frame(maxWidth: .infinity, minHeight: 80)
+        .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(Color(.systemGray5), lineWidth: 0.5)
         )
-        .clipped()
     }
 }
 

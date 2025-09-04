@@ -41,6 +41,11 @@ struct FavoritesView: View {
             }
         }
         .navigationTitle("Favorites")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                ThemeToggle()
+            }
+        }
     }
     
     private var favoritesList: some View {

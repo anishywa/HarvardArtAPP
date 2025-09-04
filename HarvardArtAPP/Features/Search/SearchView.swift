@@ -72,6 +72,11 @@ struct SearchView: View {
             }
         }
         .navigationTitle("Search")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                ThemeToggle()
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .alert("Error", isPresented: Binding<Bool>(
             get: { viewModel.errorMessage != nil },

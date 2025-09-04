@@ -88,11 +88,10 @@ class APIClient: ObservableObject {
     
     func searchPeople(query: String, page: Int = 1, size: Int = 20) async throws -> APIResponse<Person> {
         let endpoint = "/person"
-        // Enhance search relevance by combining user query with quality indicators
-        let enhancedQuery = "\(query) AND (Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major)"
+        // For people/artists, use the query as-is to avoid over-filtering
         let queryItems = [
             URLQueryItem(name: "apikey", value: apiKey),
-            URLQueryItem(name: "q", value: enhancedQuery),
+            URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "size", value: String(size)),
             URLQueryItem(name: "page", value: String(page))
         ]
@@ -102,11 +101,10 @@ class APIClient: ObservableObject {
     
     func searchClassifications(query: String, page: Int = 1, size: Int = 20) async throws -> APIResponse<Classification> {
         let endpoint = "/classification"
-        // Enhance search relevance by combining user query with quality indicators
-        let enhancedQuery = "\(query) AND (Harvard OR museum OR collection OR gallery OR masterpiece OR famous OR important OR significant OR major)"
+        // For classifications/mediums, use the query as-is to avoid over-filtering
         let queryItems = [
             URLQueryItem(name: "apikey", value: apiKey),
-            URLQueryItem(name: "q", value: enhancedQuery),
+            URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "size", value: String(size)),
             URLQueryItem(name: "page", value: String(page))
         ]
@@ -153,11 +151,27 @@ class APIClient: ObservableObject {
         
         do {
             let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
+            let result = try decoder.decode(T.self, from: data)
+            
+            // Debug logging for search endpoints
+            if url.absoluteString.contains("/person") || url.absoluteString.contains("/classification") {
+                print("🔍 API Request: \(url.absoluteString)")
+                // Use reflection to safely get records count without type casting
+                let mirror = Mirror(reflecting: result)
+                if let recordsChild = mirror.children.first(where: { $0.label == "records" }) {
+                    let recordsMirror = Mirror(reflecting: recordsChild.value)
+                    if recordsMirror.displayStyle == .collection {
+                        print("📊 Results count: \(recordsMirror.children.count)")
+                    }
+                }
+            }
+            
+            return result
         } catch {
-            print("Decoding error: \(error)")
+            print("❌ Decoding error for URL: \(url.absoluteString)")
+            print("❌ Error: \(error)")
             if let jsonString = String(data: data, encoding: .utf8) {
-                print("Response JSON: \(jsonString)")
+                print("📄 Response JSON (first 500 chars): \(String(jsonString.prefix(500)))")
             }
             throw APIError.decodingError(error)
         }

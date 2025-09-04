@@ -35,6 +35,11 @@ struct BrowseView: View {
         }
         .navigationTitle("Browse")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                ThemeToggle()
+            }
+        }
         .refreshable {
             await viewModel.refreshExhibitions()
         }

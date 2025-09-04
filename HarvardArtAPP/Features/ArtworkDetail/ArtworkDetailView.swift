@@ -28,6 +28,11 @@ struct ArtworkDetailView: View {
         .navigationTitle(artwork.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(false)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                CompactThemeToggle()
+            }
+        }
     }
     
     private var artworkImage: some View {

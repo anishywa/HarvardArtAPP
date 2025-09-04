@@ -20,7 +20,13 @@ enum SearchResult: Identifiable {
         case .exhibition(let exhibition):
             return "exhibition_\(exhibition.id)"
         case .artist(let person):
-            return "artist_\(person.id ?? 0)"
+            // Use a more robust ID generation for artists
+            if let personId = person.id {
+                return "artist_\(personId)"
+            } else {
+                // Fallback to name-based ID if person ID is nil
+                return "artist_\(person.effectiveName.hashValue)"
+            }
         case .medium(let classification):
             return "medium_\(classification.id)"
         }

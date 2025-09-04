@@ -62,6 +62,11 @@ struct ExhibitionDetailView: View {
             }
         }
         .navigationTitle("Exhibition")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                CompactThemeToggle()
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadArtworks()

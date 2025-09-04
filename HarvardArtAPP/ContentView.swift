@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var favoritesStore = FavoritesStore.shared
+    @StateObject private var appearanceManager = AppearanceManager.shared
     @State private var selectedTab = 0
     
     var body: some View {
@@ -41,6 +42,8 @@ struct ContentView: View {
             .tag(2)
         }
         .environmentObject(favoritesStore)
+        .environmentObject(appearanceManager)
+        .preferredColorScheme(appearanceManager.currentMode.colorScheme)
     }
 }
 

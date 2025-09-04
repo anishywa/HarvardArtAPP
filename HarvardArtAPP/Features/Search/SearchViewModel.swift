@@ -80,10 +80,17 @@ class SearchViewModel: ObservableObject {
             searchResults = results
             currentPage = 1
             hasMorePages = true // We'll implement pagination later if needed
+            
+            // Debug logging for artist and medium searches
+            if category == .artists || category == .mediums {
+                print("🔍 Search completed for \(category.rawValue): '\(trimmedQuery)'")
+                print("📊 Results found: \(results.count)")
+            }
         } catch {
             // Don't show error for cancelled tasks
             if !Task.isCancelled {
                 errorMessage = error.localizedDescription
+                print("❌ Search error for \(category.rawValue): \(error.localizedDescription)")
             }
         }
         
@@ -102,11 +109,15 @@ class SearchViewModel: ObservableObject {
             
         case .artists:
             let response: APIResponse<Person> = try await apiClient.searchPeople(query: query, page: page)
-            return response.records.map { SearchResult.artist($0) }
+            let results = response.records.map { SearchResult.artist($0) }
+            print("🔍 Artist search API returned \(response.records.count) records")
+            return results
             
         case .mediums:
             let response: APIResponse<Classification> = try await apiClient.searchClassifications(query: query, page: page)
-            return response.records.map { SearchResult.medium($0) }
+            let results = response.records.map { SearchResult.medium($0) }
+            print("🔍 Medium search API returned \(response.records.count) records")
+            return results
             
         case .all:
             // Perform general search across all categories

@@ -37,6 +37,11 @@ struct ArtistDetailView: View {
             .padding()
         }
         .navigationTitle(artist.displayName)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                CompactThemeToggle()
+            }
+        }
         .navigationBarTitleDisplayMode(.large)
         .task {
             await viewModel.loadArtworksByArtist(artistId: artist.id ?? 0)
